@@ -1,9 +1,10 @@
 from unittest.mock import AsyncMock, patch
 
+import httpx
 import pytest
 
 from app.schemas.city import CityItem
-from app.services.qweather import QWeatherError, QWeatherTimeoutError
+from app.services.qweather import QWeatherError, QWeatherService, QWeatherTimeoutError
 
 
 @pytest.mark.anyio
@@ -76,3 +77,91 @@ async def test_search_cities_multiple_results(client):
         resp = await client.get("/api/cities", params={"q": "北京"})
     assert resp.status_code == 200
     assert len(resp.json()["data"]) == 2
+
+
+@pytest.mark.anyio
+async def test_search_cities_qweather_no_such_location(client):
+    """测试 QWeather 返回 HTTP 400 No Such Location 时返回空数组（BUG-001 修复验证）"""
+    # 模拟 QWeather 对无效城市名返回 HTTP 400 + No Such Location
+    mock_response = httpx.Response(
+        status_code=400,
+        json={"error": {"status": 400, "title": "No Such Location"}},
+        request=httpx.Request("GET", "https://example.com/geo/v2/city/lookup"),
+    )
+    http_error = httpx.HTTPStatusError(
+        "Bad Request", request=mock_response.request, response=mock_response
+    )
+    with patch(
+        "app.services.qweather.httpx.AsyncClient"
+    ) as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+        mock_response.raise_for_status = lambda: (_ for _ in ()).throw(http_error)  # noqa: E501
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_cls.return_value = mock_client
+
+        resp = await client.get("/api/cities", params={"q": "xyznotacity999"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["code"] == "OK"
+    assert data["data"] == []
+
+
+@pytest.mark.anyio
+async def test_search_city_service_no_such_location():
+    """测试 QWeatherService.search_city 对 No Such Location 返回空列表"""
+    service = QWeatherService()
+    mock_response = httpx.Response(
+        status_code=400,
+        json={"error": {"status": 400, "title": "No Such Location"}},
+        request=httpx.Request("GET", "https://example.com/geo/v2/city/lookup"),
+    )
+    http_error = httpx.HTTPStatusError(
+        "Bad Request", request=mock_response.request, response=mock_response
+    )
+
+    def raise_for_status():
+        raise http_error
+
+    mock_response.raise_for_status = raise_for_status
+
+    with patch("app.services.qweather.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_cls.return_value = mock_client
+
+        result = await service.search_city("xyznotacity999")
+    assert result == []
+
+
+@pytest.mark.anyio
+async def test_search_city_service_http_400_other_error():
+    """测试 QWeatherService 对非 No Such Location 的 HTTP 400 仍抛出 QWeatherError"""
+    service = QWeatherService()
+    mock_response = httpx.Response(
+        status_code=400,
+        json={"error": {"status": 400, "title": "Invalid Parameter"}},
+        request=httpx.Request("GET", "https://example.com/geo/v2/city/lookup"),
+    )
+    http_error = httpx.HTTPStatusError(
+        "Bad Request", request=mock_response.request, response=mock_response
+    )
+
+    def raise_for_status():
+        raise http_error
+
+    mock_response.raise_for_status = raise_for_status
+
+    with patch("app.services.qweather.httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.get.return_value = mock_response
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_cls.return_value = mock_client
+
+        with pytest.raises(QWeatherError) as exc_info:
+            await service.search_city("test")
+        assert exc_info.value.code == "UPSTREAM_ERROR"

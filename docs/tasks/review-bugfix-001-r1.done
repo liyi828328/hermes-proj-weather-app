@@ -1,0 +1,5 @@
+conclusion: request-changes
+critical: 1
+warning: 1
+suggestion: 2
+details: .coverage二进制文件提交到PR；PR范围污染（包含前一轮task/review产物文件）

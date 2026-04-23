@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import List, Optional
 
 import httpx
@@ -7,6 +8,8 @@ import httpx
 from app.config import settings
 from app.schemas.city import CityItem
 from app.schemas.weather import WeatherNow
+
+logger = logging.getLogger(__name__)
 
 
 class QWeatherError(Exception):
@@ -47,6 +50,28 @@ class QWeatherService:
                     return resp.json()
             except httpx.TimeoutException:
                 last_exc = QWeatherTimeoutError()
+            except httpx.HTTPStatusError as exc:
+                # QWeather 对无效城市名返回 HTTP 400 + "No Such Location"
+                if exc.response.status_code == 400:
+                    try:
+                        body = exc.response.json()
+                        error_title = body.get("error", {}).get("title", "")
+                        if "No Such Location" in error_title:
+                            return {"code": "404", "location": []}
+                    except Exception:
+                        logger.warning(
+                            "解析上游 400 响应 JSON 失败: path=%s status=%s",
+                            path, exc.response.status_code,
+                        )
+                # 4xx 客户端错误不应重试，直接抛出
+                if 400 <= exc.response.status_code < 500:
+                    raise QWeatherError(
+                        "UPSTREAM_ERROR",
+                        f"上游返回客户端错误 {exc.response.status_code}",
+                    )
+                last_exc = QWeatherError(
+                    "UPSTREAM_ERROR", "天气服务暂时不可用，请稍后重试"
+                )
             except httpx.HTTPError:
                 last_exc = QWeatherError(
                     "UPSTREAM_ERROR", "天气服务暂时不可用，请稍后重试"

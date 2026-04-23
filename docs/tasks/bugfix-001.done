@@ -1,0 +1,8 @@
+task: bugfix-001
+status: done
+pr: https://github.com/liyi828328/hermes-proj-weather-app/pull/5
+branch: coder/4-bugfix-city-search-not-found
+tests: 25 passed, 0 failed
+coverage: 97%
+lint: ruff check passed
+summary: 修复 QWeather HTTP 400 No Such Location 未被正确处理的问题，新增 HTTPStatusError 捕获逻辑，返回空结果而非 502
