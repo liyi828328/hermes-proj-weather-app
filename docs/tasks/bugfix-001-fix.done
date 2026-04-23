@@ -1,0 +1,1 @@
+{"task_id": "bugfix-001-fix", "status": "completed", "branch": "coder/4-bugfix-city-search-not-found", "pr": 5, "commit": "d00d9b7", "summary": "已修复全部4条review意见：移除.coverage二进制产物、清理无关文件、4xx不重试直接抛出、JSON解析失败添加warning日志。25个测试全部通过。"}
