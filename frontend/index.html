@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>天气查询</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>🌤️ 天气查询</h1>
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="输入城市名称，如：北京" autocomplete="off">
+            <button id="search-btn">搜索</button>
+        </div>
+        <div id="error-msg" class="error-msg" style="display:none;"></div>
+        <ul id="city-list" class="city-list" style="display:none;"></ul>
+        <div id="weather-card" class="weather-card" style="display:none;">
+            <h2 id="city-name"></h2>
+            <div class="weather-info">
+                <div class="weather-main">
+                    <span id="weather-temp" class="temp"></span>
+                    <span id="weather-text" class="text"></span>
+                </div>
+                <div class="weather-details">
+                    <div class="detail-item">
+                        <span class="label">风向</span>
+                        <span id="weather-wind" class="value"></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">风力</span>
+                        <span id="weather-wind-scale" class="value"></span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">湿度</span>
+                        <span id="weather-humidity" class="value"></span>
+                    </div>
+                </div>
+                <div class="obs-time">
+                    <span>观测时间：</span><span id="weather-obs-time"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/app.js"></script>
+</body>
+</html>
