@@ -1,0 +1,6 @@
+arch-001 completed
+outputs:
+  - docs/architecture.md (status: pending_review)
+  - docs/contracts/api.yaml
+  - docs/contracts/error-codes.md
+  - docs/decisions/adr-001-tech-stack.md

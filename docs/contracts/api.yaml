@@ -1,0 +1,172 @@
+openapi: "3.1.0"
+info:
+  title: Weather App API
+  version: "1.0.0"
+  description: 天气查询应用后端 API
+
+servers:
+  - url: http://localhost:8000
+    description: 本地开发
+
+paths:
+  /api/cities:
+    get:
+      summary: 城市搜索
+      description: 根据城市名称模糊搜索城市列表
+      operationId: searchCities
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: 城市名称（中文或拼音）
+          schema:
+            type: string
+            minLength: 1
+            example: "北京"
+      responses:
+        "200":
+          description: 搜索成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, data]
+                properties:
+                  code:
+                    type: string
+                    enum: ["OK"]
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CityItem"
+              example:
+                code: "OK"
+                data:
+                  - id: "101010100"
+                    name: "北京"
+                    adm1: "北京"
+                    adm2: "北京"
+                    country: "中国"
+        "400":
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                code: "INVALID_PARAM"
+                message: "查询参数 q 不能为空"
+        "502":
+          description: 上游服务不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              example:
+                code: "UPSTREAM_ERROR"
+                message: "天气服务暂时不可用，请稍后重试"
+
+  /api/weather:
+    get:
+      summary: 实时天气查询
+      description: 根据城市 ID 获取实时天气信息
+      operationId: getWeatherNow
+      parameters:
+        - name: location
+          in: query
+          required: true
+          description: 城市 ID（从城市搜索接口获取）
+          schema:
+            type: string
+            example: "101010100"
+      responses:
+        "200":
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, data]
+                properties:
+                  code:
+                    type: string
+                    enum: ["OK"]
+                  data:
+                    $ref: "#/components/schemas/WeatherNow"
+              example:
+                code: "OK"
+                data:
+                  temp: "23"
+                  text: "晴"
+                  windDir: "西北风"
+                  windScale: "3"
+                  humidity: "45"
+                  obsTime: "2026-04-23T15:00+08:00"
+        "400":
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: 上游服务不可用
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  schemas:
+    CityItem:
+      type: object
+      required: [id, name, adm1, adm2, country]
+      properties:
+        id:
+          type: string
+          description: 城市 ID
+        name:
+          type: string
+          description: 城市名称
+        adm1:
+          type: string
+          description: 一级行政区
+        adm2:
+          type: string
+          description: 二级行政区
+        country:
+          type: string
+          description: 国家
+
+    WeatherNow:
+      type: object
+      required: [temp, text, windDir, windScale, humidity, obsTime]
+      properties:
+        temp:
+          type: string
+          description: 温度（摄氏度）
+        text:
+          type: string
+          description: 天气状况文字描述
+        windDir:
+          type: string
+          description: 风向
+        windScale:
+          type: string
+          description: 风力等级
+        humidity:
+          type: string
+          description: 相对湿度（百分比）
+        obsTime:
+          type: string
+          description: 观测时间（ISO 8601）
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          description: 错误码
+        message:
+          type: string
+          description: 错误描述
