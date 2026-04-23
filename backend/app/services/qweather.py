@@ -47,6 +47,19 @@ class QWeatherService:
                     return resp.json()
             except httpx.TimeoutException:
                 last_exc = QWeatherTimeoutError()
+            except httpx.HTTPStatusError as exc:
+                # QWeather 对无效城市名返回 HTTP 400 + "No Such Location"
+                if exc.response.status_code == 400:
+                    try:
+                        body = exc.response.json()
+                        error_title = body.get("error", {}).get("title", "")
+                        if "No Such Location" in error_title:
+                            return {"code": "404", "location": []}
+                    except Exception:
+                        pass
+                last_exc = QWeatherError(
+                    "UPSTREAM_ERROR", "天气服务暂时不可用，请稍后重试"
+                )
             except httpx.HTTPError:
                 last_exc = QWeatherError(
                     "UPSTREAM_ERROR", "天气服务暂时不可用，请稍后重试"

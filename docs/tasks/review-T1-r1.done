@@ -1,0 +1,5 @@
+conclusion: request-changes
+critical: 2
+warning: 3
+suggestion: 2
+details: 硬编码API密钥、.coverage二进制文件提交、CORS不安全配置、重复依赖声明、AsyncClient未复用
